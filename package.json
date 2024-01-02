@@ -1,0 +1,23 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "Practice of node",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node src/index.js"
+
+  },
+  "keywords": [
+    "javascript",
+    "backend",
+    "nodejs"
+  ],
+  "author": "Vishal Rai",
+  "license": "ISC",
+  "dependencies": {
+    "-": "^0.0.1",
+    "D": "^1.0.0",
+    "nodemon": "^3.0.2"
+  }
+}
