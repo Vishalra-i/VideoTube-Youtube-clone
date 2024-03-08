@@ -5,8 +5,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "node src/index.js"
-
+    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
   },
   "keywords": [
     "javascript",
@@ -16,8 +15,14 @@
   "author": "Vishal Rai",
   "license": "ISC",
   "dependencies": {
-    "-": "^0.0.1",
-    "D": "^1.0.0",
-    "nodemon": "^3.0.2"
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mongoose": "^8.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "prettier": "^3.1.1"
   }
 }
