@@ -1,7 +1,7 @@
 import ApiError from "../utils/ApiError.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {User} from "../models/user.model.js"
-import { uploadOnCloudinary } from "../utils/cloudinary.js"
+import { deleteOnCloudnary, uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import Jwt  from "jsonwebtoken"
 
@@ -281,22 +281,32 @@ const updateUserAvatar = asyncHandler( async(req, res)=>{
       throw new ApiError(400, "Avatar file is required")
     }
 
-    const avatar = uploadOnCloudinary(updateAvatarLocal)
-
-     
+    
+    
+    const avatar = await uploadOnCloudinary(updateAvatarLocal)
+    
+    
     if(!avatar.url){
       throw new ApiError(400, "Error While updating avatar in cloudinary")
     }
+    
+    //Delete Previous Image
+    const publicId = req.user.avatar.match(/\/v\d+\/(.+)\.\w{3,4}$/)[1]
+    const deletePrevimage =  deleteOnCloudnary(publicId)
 
-    const user = await User.findByIdAndUpdate(req.user?._Id,{
+    //Find and update user avatar in db  
+    const user = await User.findByIdAndUpdate(req.user?._id,{
       $set:{
         avatar : avatar?.url
       }
       
     },{
       new : true
-    }).select("-password ")
-
+    }).select("-password ").catch(error=>{
+      console.log(error);
+    })
+     
+    //return response
     return res.status(200)
     .json(new ApiResponse(200 , user , "Avatar Updated Successfully"))
 
@@ -308,13 +318,18 @@ const updateUsercoverImage  = asyncHandler( async(req, res)=>{
     if(!updatecoverImageLocal){
       throw new ApiError(400, "cover image file is required")
     }
-
+    
+    //upload new image
     const coverImage = uploadOnCloudinary(updatecoverImageLocal)
-
-     
+    
+    
     if(!coverImage.url){
       throw new ApiError(400, "Error While updating cover Image in cloudinary")
     }
+    
+    //Delete Previous Image
+    const publicId = req.user.coverImage.match(/\/v\d+\/(.+)\.\w{3,4}$/)[1]
+    const deletePrevimage =  deleteOnCloudnary(publicId)
 
     const user = await User.findByIdAndUpdate(req.user?._Id,{
       $set:{
@@ -330,7 +345,74 @@ const updateUsercoverImage  = asyncHandler( async(req, res)=>{
 
 })
 
+//Channel Profile
+const getUserChannelProfile = asyncHandler( async(req, res)=>{
+  const {username} =  req.params
+  
+  if(!username?.trim()){
+    throw new ApiError(400, "Username is missing")
+  }
 
+  const channel = await User.aggregate([
+    {
+      $match : {
+        username : username.toLowerCase()
+      }
+    },
+    {
+      $lookup :{
+        from : "subscriptions" ,
+        localField : "_id" ,
+        foreignField : "channel" ,
+        as : "subscribers"
+      }
+    },
+    {
+      $lookup :{
+        from : "subscriptions" ,
+        localField : "_id" ,
+        foreignField : "subscriber" ,
+        as : "subscribedTo"
+      }
+    },
+    {
+      $addFields :{
+        subscriberCount : {
+           $size : "$subscribers"
+        },
+        channelSubsribedTo :{
+          $size : "$subscribedTo"  
+        },
+        isSubscribed:{
+          $cond:{
+            if: {$in: [req.user?._id   , "subscribers.subscriber"]},
+            then: true,
+            elase:false
+          }
+        }
+      }
+    },
+    {
+      $project : {
+        fullName : 1,
+        username : 1,
+        avatar : 1,
+        coverImage : 1,
+        subscriberCount : 1,
+        channelSubsribedTo : 1,
+        isSubscribed : 1,
+        email: 1 ,
+      }
+    }
+  ])
+
+  if(!channel?.length){
+     throw new ApiError(404, "Channel not found")
+  }
+
+  return res.status(200)
+          .json(new ApiResponse(200, channel[0], "Channel profile fetched successfully"))
+})
 
 
 export {
@@ -342,5 +424,6 @@ export {
   getCurrentUser,
   updateAccountdetails,
   updateUserAvatar,
-  updateUsercoverImage
+  updateUsercoverImage,
+  getUserChannelProfile
 }
